@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบฐานข้อมูลวิจัยและตีพิมพ์ - คณะนิติศาสตร์ มรส.</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- Core Theme & Typography (เหมือนเดิม) --- */
+        :root {
+            --law-maroon-dark: #4a0000;
+            --law-maroon: #800000;
+            --law-maroon-light: #a52a2a;
+            --law-gold: #D4AF37;
+            --law-gold-light: #F4D03F;
+        }
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            background-color: #f0f2f5; 
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background-image: url('logo.png');
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: 60%;
+            opacity: 0.1;
+            filter: grayscale(50%);
+            pointer-events: none;
+        }
+
+        .majestic-header {
+            background: linear-gradient(135deg, var(--law-maroon-dark) 0%, var(--law-maroon) 50%, var(--law-maroon-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            border-bottom: 4px solid var(--law-gold);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .logo-container-header {
+            background: white;
+            padding: 6px;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+            border: 3px solid var(--law-gold);
+        }
+        .header-title {
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .header-subtitle {
+            color: var(--law-gold-light);
+            font-weight: 500;
+        }
+
+        .content-container { position: relative; z-index: 1; }
+        .content-card {
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            border-radius: 1rem;
+            backdrop-filter: blur(5px);
+        }
+
+        .tci-1 { background-color: #059669; color: white; } 
+        .tci-2 { background-color: #2563eb; color: white; } 
+        .tci-3 { background-color: #d97706; color: white; } 
+        .tci-fund { background-color: #7e22ce; color: white; }
+
+        .author-link { cursor: pointer; color: var(--law-maroon); font-weight: 700; text-decoration: underline; text-decoration-color: rgba(128,0,0,0.3); }
+        .author-link:hover { color: var(--law-maroon-dark); background-color: rgba(128,0,0,0.05); border-radius: 4px; }
+        
+        .modal { display: none; position: fixed; z-index: 1000; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); justify-content: center; align-items: center; }
+        .modal-content { background: white; border-radius: 1rem; width: 95%; max-width: 800px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.4); position: relative; }
+        
+        .card-hover:hover { transform: translateY(-3px); transition: all 0.3s ease; box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.2); }
+
+        .btn-action { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: bold; font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-gold { background: linear-gradient(to bottom, #F4D03F, #D4AF37); color: #4a0000; border: 1px solid #cfa052; }
+        .btn-gold:hover { background: linear-gradient(to bottom, #D4AF37, #b3922d); }
+    </style>
+</head>
+<body>
+
+    <header class="majestic-header">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="logo-container-header w-16 h-16 flex items-center justify-center bg-white">
+                    <img src="logo.png" class="h-12 w-auto" onerror="this.src='https://upload.wikimedia.org/wikipedia/th/a/a2/Suratthani_Rajabhat_University_Logo.png'">
+                </div>
+                <div>
+                    <h1 class="text-2xl md:text-3xl header-title">คณะนิติศาสตร์</h1>
+                    <p class="text-sm header-subtitle">มหาวิทยาลัยราชภัฏสุราษฎร์ธานี (LAW SRU)</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="openAddModal()" class="btn-action btn-gold">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> เพิ่มข้อมูล/แนบไฟล์
+                </button>
+
+                <div class="hidden sm:flex gap-2">
+                    <button onclick="exportWord()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition shadow-md">
+                        <i data-lucide="file-text" class="w-4 h-4"></i> Word
+                    </button>
+                    <button onclick="exportExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition shadow-md">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-10 max-w-6xl content-container">
+        
+        <div class="content-card p-8 mb-8 border-t-4 border-law-maroon">
+            <h2 class="text-2xl font-bold text-law-maroon mb-6 flex items-center gap-2">
+                <i data-lucide="database" class="text-law-gold"></i> ฐานข้อมูลงานวิจัยและตีพิมพ์
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <div class="md:col-span-6 relative">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">คำค้นหา (ชื่อเรื่อง/ผู้วิจัย)</label>
+                    <div class="relative">
+                        <i data-lucide="search" class="absolute left-4 top-3.5 text-gray-400 w-5 h-5"></i>
+                        <input type="text" id="searchInput" placeholder="พิมพ์เพื่อค้นหา..." class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-red-100 focus:border-law-maroon outline-none transition text-gray-700" onkeyup="filterData()">
+                    </div>
+                </div>
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">ปีงบประมาณ</label>
+                    <select id="yearFilter" onchange="filterData()" class="w-full p-3 border-2 border-gray-200 rounded-xl outline-none bg-gray-50 focus:border-law-maroon cursor-pointer text-gray-700 font-medium">
+                        <option value="">ทั้งหมด (All Years)</option>
+                        <option value="2570">2570</option><option value="2569">2569</option><option value="2568">2568</option>
+                        <option value="2567">2567</option><option value="2566">2566</option><option value="2565">2565</option>
+                    </select>
+                </div>
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">ประเภท / กลุ่ม TCI</label>
+                    <select id="tciFilter" onchange="filterData()" class="w-full p-3 border-2 border-gray-200 rounded-xl outline-none bg-gray-50 focus:border-law-maroon cursor-pointer text-gray-700 font-medium">
+                        <option value="">ทั้งหมด (All Types)</option>
+                        <option value="TCI 1">TCI กลุ่ม 1 (ตีพิมพ์)</option>
+                        <option value="TCI 2">TCI กลุ่ม 2 (ตีพิมพ์)</option>
+                        <option value="โครงการวิจัย">โครงการวิจัย (ได้รับทุน)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-4 text-right">
+                <button onclick="if(confirm('คุณแน่ใจหรือไม่ที่จะล้างข้อมูลที่เพิ่มมาใหม่ทั้งหมด?')) { localStorage.removeItem('law_sru_db'); location.reload(); }" class="text-xs text-gray-400 hover:text-red-500 underline">ล้างข้อมูลที่บันทึก (Reset DB)</button>
+            </div>
+        </div>
+
+        <div id="resultsList" class="space-y-4">
+            </div>
+    </main>
+
+    <div id="profileModal" class="modal">
+        <div class="modal-content shadow-2xl overflow-hidden">
+            <div style="background: linear-gradient(135deg, var(--law-maroon) 0%, var(--law-maroon-dark) 100%);" class="p-6 text-white flex justify-between items-center border-b-4 border-law-gold">
+                <div class="flex items-center gap-4">
+                    <div class="bg-white p-3 rounded-full text-law-maroon shadow-xl border-2 border-law-gold">
+                        <i data-lucide="user-check" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <h2 id="modalName" class="text-2xl font-bold tracking-wide" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">ชื่ออาจารย์</h2>
+                        <p class="text-sm text-law-gold-light font-medium">สรุปผลงานวิจัยและงานตีพิมพ์รายบุคคล</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('profileModal')" class="bg-white/10 hover:bg-white/30 p-2 rounded-full transition"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div id="modalBody" class="p-6 bg-gray-50 space-y-4 max-h-[60vh] overflow-y-auto">
+            </div>
+        </div>
+    </div>
+
+    <div id="addModal" class="modal">
+        <div class="modal-content shadow-2xl p-6 bg-white">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h2 class="text-2xl font-bold text-law-maroon flex items-center gap-2">
+                    <i data-lucide="file-plus" class="text-law-gold"></i> เพิ่มข้อมูลงานวิจัย
+                </h2>
+                <button onclick="closeModal('addModal')" class="text-gray-400 hover:text-red-500"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">ชื่อบทความ / โครงการวิจัย <span class="text-red-500">*</span></label>
+                    <input type="text" id="addTitle" class="w-full p-2 border rounded focus:ring-2 focus:ring-law-maroon outline-none">
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">ชื่อผู้วิจัย (คั่นด้วยจุลภาค ,) <span class="text-red-500">*</span></label>
+                    <input type="text" id="addAuthors" class="w-full p-2 border rounded focus:ring-2 focus:ring-law-maroon outline-none" placeholder="เช่น ผศ.ดร.สมชาย, อ.วิชัย">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">ปีงบประมาณ</label>
+                    <select id="addYear" class="w-full p-2 border rounded outline-none">
+                        <option value="2570">2570</option><option value="2569">2569</option>
+                        <option value="2568" selected>2568</option><option value="2567">2567</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">ประเภท</label>
+                    <select id="addType" class="w-full p-2 border rounded outline-none">
+                        <option value="โครงการวิจัย">โครงการวิจัย</option>
+                        <option value="บทความตีพิมพ์">บทความตีพิมพ์</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">แหล่งทุน / วารสาร</label>
+                    <input type="text" id="addSource" class="w-full p-2 border rounded outline-none" placeholder="เช่น กองทุน ววน., วารสารนิติศาสตร์">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">กลุ่ม TCI (ถ้ามี)</label>
+                    <select id="addTci" class="w-full p-2 border rounded outline-none">
+                        <option value="">-</option><option value="1">กลุ่ม 1</option><option value="2">กลุ่ม 2</option><option value="3">กลุ่ม 3</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-2 mt-2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">แนบไฟล์ (PDF หรือ Word)</label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 cursor-pointer relative transition-colors" id="dropZone">
+                        <input type="file" id="addFile" accept=".pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(this)">
+                        <i data-lucide="upload-cloud" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i>
+                        <span class="text-sm text-gray-500">คลิกเพื่อเลือกไฟล์ PDF หรือ Word</span>
+                        <div id="fileNameDisplay" class="text-law-maroon font-bold text-sm mt-2"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">* หมายเหตุ: ไฟล์จะถูกบันทึกในเครื่องของคุณ (Local Storage) หากไฟล์มีขนาดใหญ่เกินไปอาจบันทึกไม่ได้</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeModal('addModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">ยกเลิก</button>
+                <button onclick="saveNewData()" class="px-6 py-2 bg-law-maroon text-white font-bold rounded shadow hover:bg-red-900 transition">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================
+        // ข้อมูลตั้งต้น (Default Data)
+        // =========================================
+        const defaultData = [
+            { year: "2570", title: "แนวทางการแก้ไขปัญหาเกี่ยวกับสิทธิในที่ดินเพื่อความมั่นคงในที่อยู่อาศัยและการใช้ประโยชน์ที่ดิน", authors: ["ผศ.ดร.ฉัตตมาศ วิเศษสินธุ์"], type: "โครงการวิจัย", source: "กองทุน ววน. (FF)", tci: "", fileData: null, fileName: null },
+            { year: "2570", title: "การมีส่วนร่วมของชุมชนกับการจัดการทรัพยากรธรรมชาติและสิ่งแวดล้อม", authors: ["ผศ.ดร.นิรมล ยินดี"], type: "โครงการวิจัย", source: "กองทุน ววน. (FF)", tci: "", fileData: null, fileName: null },
+            { year: "2569", title: "การศึกษาด้านอาชญากรรมไซเบอร์ในพื้นที่ตำบลบางใบไม้", authors: ["ผศ.ดร.ฉัตตมาศ วิเศษสินธุ์", "ผศ.ดร.ธัญญาภัส ทองมุสิทธิ์"], type: "โครงการวิจัย", source: "งบยุทธศาสตร์ มรส.", tci: "", fileData: null, fileName: null },
+            { year: "2568", title: "RESOLVING LAND DISPUTES ON KOH TAO : LEGAL FRAMEWORKS", authors: ["รศ.ดร.อัคคกร ไชยพงษ์"], type: "บทความตีพิมพ์", source: "Asian Crime Review", tci: "1", fileData: null, fileName: null },
+            { year: "2568", title: "การคุ้มครองสิทธิผู้ต้องขังกลุ่มเพศทางเลือก", authors: ["อ.อภิชาติ โกศล"], type: "บทความตีพิมพ์", source: "วารสารสังคมศาสตร์", tci: "2", fileData: null, fileName: null }
+        ];
+
+        // --- Load Data from LocalStorage ---
+        // พยายามโหลดข้อมูลเก่า ถ้าไม่มีให้ใช้ข้อมูลตั้งต้น
+        let masterData = [];
+        try {
+            const savedData = localStorage.getItem('law_sru_db');
+            if (savedData) {
+                masterData = JSON.parse(savedData);
+            } else {
+                masterData = [...defaultData];
+            }
+        } catch (e) {
+            console.error("Error loading data", e);
+            masterData = [...defaultData];
+        }
+
+        let filteredData = [...masterData];
+
+        // --- Core Functions ---
+        function filterData() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const year = document.getElementById('yearFilter').value;
+            const tciType = document.getElementById('tciFilter').value;
+
+            filteredData = masterData.filter(item => {
+                const matchSearch = item.title.toLowerCase().includes(search) || item.authors.some(a => a.toLowerCase().includes(search));
+                const matchYear = year ? item.year === year : true;
+                const matchTci = tciType ? (tciType === "โครงการวิจัย" ? item.type === "โครงการวิจัย" : `TCI ${item.tci}` === tciType) : true;
+                return matchSearch && matchYear && matchTci;
+            });
+
+            renderUI();
+        }
+
+        function getFileIcon(fileName) {
+            if (!fileName) return 'file';
+            const ext = fileName.split('.').pop().toLowerCase();
+            if (ext === 'pdf') return 'file-text'; // หรือไอคอน PDF
+            if (ext === 'doc' || ext === 'docx') return 'file-type-2'; // ไอคอน Word
+            return 'file';
+        }
+
+        function renderUI() {
+            const container = document.getElementById('resultsList');
+            if (!filteredData.length) {
+                container.innerHTML = `<div class="content-card text-center py-16 px-4"><p class="text-gray-400">ไม่พบข้อมูลที่ค้นหา</p></div>`;
+                return;
+            }
+
+            container.innerHTML = filteredData.map(item => {
+                let badgeClass = item.type === 'โครงการวิจัย' ? 'tci-fund' : `tci-${item.tci}`;
+                let badgeText = item.type === 'โครงการวิจัย' ? 'โครงการวิจัย/ทุน' : `TCI กลุ่ม ${item.tci}`;
+                let borderClass = item.type === 'โครงการวิจัย' ? 'border-purple-500' : (item.tci === '1' ? 'border-green-500' : 'border-blue-500');
+
+                // สร้างปุ่ม Download
+                let downloadBtn = '';
+                if (item.fileData) {
+                    const iconName = getFileIcon(item.fileName);
+                    const label = item.fileName ? (item.fileName.length > 15 ? item.fileName.substring(0,12)+'...' : item.fileName) : 'Download';
+                    
+                    downloadBtn = `
+                        <a href="${item.fileData}" download="${item.fileName || item.title}" class="flex flex-col items-center gap-2 text-gray-500 hover:text-law-maroon group/btn transition p-2 rounded-lg hover:bg-red-50 w-full md:w-auto cursor-pointer">
+                            <div class="bg-gray-100 p-3 rounded-full group-hover/btn:bg-law-maroon group-hover/btn:text-white transition shadow-sm">
+                                <i data-lucide="${iconName}" class="w-6 h-6"></i>
+                            </div>
+                            <span class="text-xs font-bold">${label}</span>
+                        </a>`;
+                } else {
+                    downloadBtn = `
+                        <div class="text-center text-gray-300 flex flex-col items-center p-2">
+                            <div class="bg-gray-50 p-3 rounded-full mb-2"><i data-lucide="file-x" class="w-6 h-6"></i></div>
+                            <span class="text-xs">No File</span>
+                        </div>`;
+                }
+
+                return `
+                    <div class="content-card bg-white p-6 rounded-2xl border-l-[6px] ${borderClass} shadow-sm card-hover transition-all relative overflow-hidden group">
+                        <div class="flex flex-col md:flex-row justify-between gap-5 relative z-10">
+                            <div class="flex-1">
+                                <div class="flex flex-wrap items-center gap-2 mb-3">
+                                    <span class="bg-red-50 text-law-maroon text-xs font-extrabold px-3 py-1 rounded-full border border-red-100 flex items-center gap-1">
+                                        <i data-lucide="calendar" class="w-3 h-3"></i> ปี ${item.year}
+                                    </span>
+                                    <span class="${badgeClass} text-xs font-extrabold px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
+                                        ${badgeText}
+                                    </span>
+                                </div>
+                                <h3 class="text-xl font-bold text-gray-800 leading-snug mb-4 group-hover:text-law-maroon transition-colors">${item.title}</h3>
+                                <div class="space-y-3">
+                                    <div class="flex items-start gap-3 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                                        <i data-lucide="users" class="w-5 h-5 mt-0.5 shrink-0 text-law-maroon"></i>
+                                        <div>
+                                            <span class="font-bold block mb-1">ผู้วิจัย/ผู้แต่ง:</span>
+                                            <div class="flex flex-wrap gap-2">
+                                                ${item.authors.map(a => `<span class="author-link" onclick="openProfile('${a}')">${a}</span>`).join(', ')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-sm text-gray-600 p-2">
+                                        <span class="font-bold">${item.type === 'โครงการวิจัย' ? 'แหล่งทุน:' : 'ตีพิมพ์ใน:'}</span> ${item.source}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-row md:flex-col justify-center items-center md:border-l md:pl-6 gap-3 min-w-[100px]">
+                                ${downloadBtn}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // --- Add Data Logic ---
+        function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
+        
+        function handleFileSelect(input) {
+            document.getElementById('fileNameDisplay').innerText = input.files[0] ? input.files[0].name : '';
+        }
+
+        function saveNewData() {
+            const title = document.getElementById('addTitle').value;
+            const authorsStr = document.getElementById('addAuthors').value;
+            const fileInput = document.getElementById('addFile');
+            
+            if(!title || !authorsStr) {
+                alert("กรุณากรอกชื่อเรื่องและชื่อผู้วิจัย");
+                return;
+            }
+
+            const newItem = {
+                year: document.getElementById('addYear').value,
+                title: title,
+                authors: authorsStr.split(',').map(s => s.trim()),
+                type: document.getElementById('addType').value,
+                source: document.getElementById('addSource').value,
+                tci: document.getElementById('addTci').value,
+                fileData: null,
+                fileName: null
+            };
+
+            // ฟังก์ชันสำหรับบันทึกและจัดการ Error
+            const saveDataToStorage = () => {
+                try {
+                    masterData.unshift(newItem); // เพิ่มข้อมูลใหม่ไปบนสุด
+                    localStorage.setItem('law_sru_db', JSON.stringify(masterData)); // บันทึกลงเครื่อง
+                    filterData();
+                    closeModal('addModal');
+                    alert("บันทึกข้อมูลเรียบร้อย!");
+                    
+                    // Reset Form
+                    document.getElementById('addTitle').value = '';
+                    document.getElementById('addAuthors').value = '';
+                    document.getElementById('addSource').value = '';
+                    document.getElementById('addFile').value = '';
+                    document.getElementById('fileNameDisplay').innerText = '';
+
+                } catch (e) {
+                    // กรณี LocalStorage เต็ม (QuotaExceededError)
+                    console.error(e);
+                    masterData.shift(); // เอาข้อมูลที่เพิ่งยัดใส่ออก
+                    alert("บันทึกไม่สำเร็จ! \nเนื่องจากไฟล์มีขนาดใหญ่เกินกว่าที่ Browser จะเก็บได้ \nกรุณาลดขนาดไฟล์หรือแนบไฟล์ที่เล็กลง");
+                }
+            };
+
+            // Handle File Upload (Convert to Base64)
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    newItem.fileData = e.target.result; // เก็บไฟล์เป็น Base64 String
+                    newItem.fileName = file.name;
+                    saveDataToStorage();
+                };
+                
+                reader.onerror = function(error) {
+                    alert("เกิดข้อผิดพลาดในการอ่านไฟล์");
+                };
+
+                reader.readAsDataURL(file);
+            } else {
+                saveDataToStorage();
+            }
+        }
+
+        // --- Modal Functions ---
+        function openProfile(name) {
+            document.getElementById('modalName').innerText = name;
+            const works = masterData.filter(item => item.authors.includes(name));
+            const body = document.getElementById('modalBody');
+            
+            if (works.length === 0) {
+                 body.innerHTML = `<p class="text-center text-gray-500 py-4">ไม่พบข้อมูลผลงาน</p>`;
+            } else {
+                body.innerHTML = works.map(w => {
+                    const iconName = getFileIcon(w.fileName);
+                    let dlButton = w.fileData ? 
+                        `<a href="${w.fileData}" download="${w.fileName || w.title}" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded border border-green-200 hover:bg-green-200 flex items-center gap-1 font-bold"><i data-lucide="${iconName}" class="w-3 h-3"></i> โหลดไฟล์</a>` 
+                        : `<span class="text-xs text-gray-400">ไม่มีไฟล์</span>`;
+
+                    return `
+                    <div class="bg-white p-4 rounded-xl border-l-4 ${w.type === 'โครงการวิจัย' ? 'border-purple-500' : 'border-blue-500'} shadow-sm hover:shadow-md transition">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[10px] font-extrabold px-2 py-1 rounded-full ${w.type === 'โครงการวิจัย' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
+                                ปี ${w.year} • ${w.type}
+                            </span>
+                            ${dlButton}
+                        </div>
+                        <h4 class="font-bold text-gray-800 text-base leading-snug">${w.title}</h4>
+                        <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                            <i data-lucide="landmark" class="w-3 h-3"></i> ${w.source}
+                        </p>
+                    </div>
+                `}).join('');
+            }
+            document.getElementById('profileModal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        window.onclick = (e) => { if (e.target.classList.contains('modal')) e.target.style.display = 'none'; }
+
+        // --- Export Functions ---
+        function exportExcel() {
+            const data = filteredData.map(i => ({
+                "ปีงบประมาณ": i.year, "ชื่อผลงาน": i.title, "ประเภท": i.type,
+                "ผู้จัดทำ": i.authors.join(', '), "แหล่งทุน/วารสาร": i.source, "กลุ่ม TCI": i.tci || "-"
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "ResearchDB");
+            XLSX.writeFile(wb, "Law_SRU_Export.xlsx");
+        }
+
+        function exportWord() {
+            alert("ฟังก์ชัน Export Word พร้อมใช้งาน (สำหรับเวอร์ชันเต็ม)");
+        }
+
+        // Initial Load
+        renderUI();
+        lucide.createIcons();
+    </script>
+</body>
+</html>
